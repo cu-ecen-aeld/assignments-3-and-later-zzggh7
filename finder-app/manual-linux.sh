@@ -12,7 +12,7 @@ BUSYBOX_VERSION=1_33_1
 FINDER_APP_DIR=$(realpath $(dirname $0))
 ARCH=arm64
 CROSS_COMPILE=aarch64-none-linux-gnu-
-TOOLCHAIN=$HOME/arm-cross-compiler/arm-gnu-toolchain-13.3.rel1-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc
+TOOLCHAIN_FOLDER=$HOME/arm-cross-compiler/arm-gnu-toolchain-13.3.rel1-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc
 
 if [ $# -lt 1 ]
 then
@@ -84,10 +84,10 @@ ${CROSS_COMPILE}readelf -a busybox | grep "program interpreter"
 ${CROSS_COMPILE}readelf -a busybox | grep "Shared library"
 
 # TODO: Add library dependencies to rootfs
-cp $TOOLCHAIN/lib/ld-linux-aarch64.so.1 $OUTDIR/rootfs/lib
-cp $TOOLCHAIN/lib64/libm.so.6           $OUTDIR/rootfs/lib64
-cp $TOOLCHAIN/lib64/libresolv.so.2      $OUTDIR/rootfs/lib64
-cp $TOOLCHAIN/lib64/libc.so.6           $OUTDIR/rootfs/lib64
+cp $TOOLCHAIN_FOLDER/lib/ld-linux-aarch64.so.1 $OUTDIR/rootfs/lib
+cp $TOOLCHAIN_FOLDER/lib64/libm.so.6           $OUTDIR/rootfs/lib64
+cp $TOOLCHAIN_FOLDER/lib64/libresolv.so.2      $OUTDIR/rootfs/lib64
+cp $TOOLCHAIN_FOLDER/lib64/libc.so.6           $OUTDIR/rootfs/lib64
 
 # TODO: Make device nodes
 sudo mknod -m 666 $OUTDIR/rootfs/dev/null c 1 3
