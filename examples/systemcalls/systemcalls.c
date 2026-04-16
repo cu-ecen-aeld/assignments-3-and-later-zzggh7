@@ -66,7 +66,7 @@ bool do_exec(int count, ...)
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
     command[count] = command[count];
-
+    va_end(args);
 /*
  * TODO:
  *   Execute a system command by calling fork, execv(),
@@ -77,8 +77,6 @@ bool do_exec(int count, ...)
  *
 */
     bool parent = true;
-    int childexec = 0;
-
 
     if(command[0][0] != '/' || command[2][0] != '/') 
     {
@@ -90,7 +88,6 @@ bool do_exec(int count, ...)
     if( pid == 0)
     {
             parent = false;
-            childexec++;
     }
 
     if(parent)
@@ -106,7 +103,7 @@ bool do_exec(int count, ...)
             printf("execv error %d", ret);
         }
     }
-    va_end(args);
+  
 
     return true;
 }
@@ -169,9 +166,10 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
                     if(-1 == execv(command[0], command))
                     {
                         perror("execv");
+                        close(fd);
                         _exit(1);
                     }
-                    close(fd); 
+   
                     break;
                 default:
                     int status;
