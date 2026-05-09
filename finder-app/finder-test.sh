@@ -10,6 +10,7 @@ cd "$(dirname "$0")"
 NUMFILES=10
 WRITESTR=AELD_IS_FUN
 WRITEDIR=/tmp/aeld-data
+RESULT_FILE=/tmp/assignment4-result.txt
 #username=$(cat /etc/finder-app/conf/username.txt)
 username=$(cat ../../etc/finder-app/conf/username.txt)
 
@@ -63,6 +64,10 @@ do
 done
 
 OUTPUTSTRING=$(./finder.sh "$WRITEDIR" "$WRITESTR")
+
+# write finder output to result file
+echo "${OUTPUTSTRING}" > "${RESULT_FILE}"
+echo "Finder output written to ${RESULT_FILE}"
 
 # remove temporary directories
 rm -rf /tmp/aeld-data
