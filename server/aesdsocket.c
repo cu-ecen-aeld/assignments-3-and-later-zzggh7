@@ -16,10 +16,10 @@ static int sfd = -1;
 static int con_fd = -1;
 static FILE *file = NULL;
 static const char *filename = "/var/tmp/aesdsocketdata";
-
+static char ip[INET_ADDRSTRLEN];
 static volatile sig_atomic_t stop = 0;
 
-static void log_incoming_ip(struct sockaddr *aconection);
+static char * get_ip(struct sockaddr *aconection);
 static void signal_handler(int signal);
 static void cleanup(void);
 static int recv_dyn(int sfd, char **rx_buf);
@@ -36,6 +36,8 @@ int main(int argc, char *argv[])
 
     (void)memset(&hints, 0, sizeof(hints));
     (void)memset(&new_action, 0, sizeof(new_action));
+
+    openlog(__FILE__, LOG_PID, LOG_USER);
 
     if((argc == 2) && strcmp(argv[1], "-d" ) == 0)
     {
@@ -69,12 +71,22 @@ int main(int argc, char *argv[])
     if ((sfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol)) == -1)
     {
         fprintf(stderr, "socket: %s \n", strerror(errno));
+        freeaddrinfo(servinfo);
+        return -1;
+    }
+
+    int opt = 1;
+    if(setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
+    {
+        fprintf(stderr, "setsockopt: %s \n", strerror(errno));
+        freeaddrinfo(servinfo);
         return -1;
     }
 
     if ((status = bind(sfd, servinfo->ai_addr, servinfo->ai_addrlen)) != 0)
     {
         fprintf(stderr, "bind: %s \n", strerror(errno));
+        freeaddrinfo(servinfo);
         return -1;
     }
 
@@ -84,11 +96,11 @@ int main(int argc, char *argv[])
     {
         printf("Starting daemon\n");
         pid_t pid = fork();
-        if(pid !=0)
-        {
-            printf("Parent - cleanup end exit\n");
-            _exit(0);
-        }
+        if(pid < 0) { perror("fork"); return -1;}
+        if(pid !=0) { printf("Parent - cleanup end exit\n"); _exit(0);}
+
+        setsid();
+        chdir("/");
     }
 
     if ((status = listen(sfd, 5)) != 0)
@@ -140,10 +152,11 @@ int main(int argc, char *argv[])
             return -1;
         }
 
-        log_incoming_ip((struct sockaddr *)&accepted_conection);
+        get_ip((struct sockaddr *)&accepted_conection);
+        syslog(LOG_INFO, "Accepted connection  from %s", ip);
 
         int rx_len = recv_dyn(con_fd, &rx_buffer);
-        if (rx_len < 0)
+        if ((rx_len < 0) || (NULL == rx_buffer))
         {
             free(rx_buffer);
             if (stop)
@@ -151,7 +164,8 @@ int main(int argc, char *argv[])
                 break;
             }
             close(con_fd);
-            syslog(LOG_INFO, "Closed connection from ...");
+            syslog(LOG_INFO, "Closed connection from %s", ip);
+
             con_fd = -1;
             continue;
         }
@@ -172,7 +186,7 @@ int main(int argc, char *argv[])
         free(line);
         free(rx_buffer);
         close(con_fd);
-        syslog(LOG_INFO, "Closed connection from ...");
+        syslog(LOG_INFO, "Closed connection from %s", ip);
         con_fd = -1;
     }
     syslog(LOG_INFO, "Caught signal, exiting");
@@ -231,14 +245,12 @@ static int recv_dyn(int sfd, char **rx_buf)
     return (int)total;
 }
 
-static void log_incoming_ip(struct sockaddr *conection)
+static char * get_ip(struct sockaddr *conection)
 {
-    char client_ip[INET_ADDRSTRLEN];
     struct sockaddr_in *addr = (struct sockaddr_in *)conection;
 
-    inet_ntop(AF_INET, &addr->sin_addr, client_ip, sizeof(client_ip));
-    printf("Accepted connection from %s\n", client_ip);
-    syslog(LOG_INFO, "Accepted connection from %s", client_ip);
+    inet_ntop(AF_INET, &addr->sin_addr, ip, sizeof(ip));
+    return ip;
 }
 
 static void cleanup(void)
@@ -251,7 +263,7 @@ static void cleanup(void)
     if (con_fd != -1)
     {
         close(con_fd);
-        syslog(LOG_INFO, "Closed connection from ...");
+        syslog(LOG_INFO, "Closed connection from %s", ip);
         con_fd = -1;
     }
     if (sfd != -1)
