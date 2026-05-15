@@ -8,6 +8,7 @@ case "$1" in
     stop)
         echo "Stopping aesdsocket"
         start-stop-daemon -K -n aesdsocket
+        ;;
     *)
         echo "Usage: {start|stop}
     exit 1
